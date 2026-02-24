@@ -1,0 +1,9 @@
+body{font-family:system-ui,Segoe UI,Roboto,Arial,Helvetica,sans-serif;margin:20px}
+.container{max-width:1100px;margin:0 auto}
+.row{display:flex;gap:16px}
+.col{flex:1}
+textarea{width:100%;font-family:monospace}
+.test-row{display:flex;gap:8px;margin:6px 0}
+input{padding:6px}
+button{padding:8px 12px;margin-right:8px}
+pre{background:#f6f8fa;padding:12px;border:1px solid #e1e4e8}
