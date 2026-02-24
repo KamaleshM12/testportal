@@ -7,21 +7,23 @@ from .docker_runner import run_submission
 from .schemas import TestCase
 
 
+DEFAULT_RUNNER_IMAGE = os.getenv('RUNNER_IMAGE', 'testportal/runner:latest')
+
 LANG_CONFIG = {
     'python': {
-        'image': 'testportal/runner:latest',
+        'image': DEFAULT_RUNNER_IMAGE,
         'compile': '',
         'run': 'python3 main.py',
         'source_name': 'main.py',
     },
     'java': {
-        'image': 'testportal/runner:latest',
+        'image': DEFAULT_RUNNER_IMAGE,
         'compile': 'javac Main.java',
         'run': 'java Main',
         'source_name': 'Main.java',
     },
     'cpp': {
-        'image': 'testportal/runner:latest',
+        'image': DEFAULT_RUNNER_IMAGE,
         'compile': 'g++ -O2 -std=gnu++17 main.cpp -o main.out',
         'run': './main.out',
         'source_name': 'main.cpp',

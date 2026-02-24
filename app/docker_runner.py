@@ -1,8 +1,18 @@
 import os
 import shlex
-import docker
 import time
 from typing import List, Dict, Any
+
+try:
+    import docker
+    from docker.errors import DockerException
+except Exception:
+    docker = None
+    DockerException = Exception
+
+
+class DockerUnavailableError(Exception):
+    pass
 
 
 def _read_output(raw: bytes) -> str:
@@ -28,31 +38,38 @@ def run_submission(
     cpus: float = 0.5,
     timeout_seconds: int = 5,
 ) -> Dict[str, Any]:
+    if docker is None:
+        raise DockerUnavailableError('Docker SDK is not available')
+
     client = docker.from_env()
     container = None
     nano_cpus = int(cpus * 1e9)
     try:
+        # Mount the workspace read-only and use a writable tmpfs at /tmp/run
         container = client.containers.run(
             image,
             command="/bin/bash",
             detach=True,
             tty=True,
-            working_dir='/workspace',
-            volumes={workspace_host_path: {'bind': '/workspace', 'mode': 'rw'}},
+            working_dir='/tmp/run',
+            volumes={workspace_host_path: {'bind': '/workspace', 'mode': 'ro'}},
             network_mode='none',
             read_only=True,
-            tmpfs={'/tmp': ''},
+            tmpfs={'/tmp/run': ''},
             security_opt=['no-new-privileges'],
             cap_drop=['ALL'],
             mem_limit=mem_limit,
             nano_cpus=nano_cpus,
         )
 
-        # Compile step (if any)
+        # copy workspace files into tmpfs for compilation/execution
+        container.exec_run(cmd=['/bin/bash', '-lc', 'mkdir -p /tmp/run && cp -a /workspace/. /tmp/run/'], workdir='/')
+
+        # Compile step (if any) inside /tmp/run
         compile_output = ''
         compile_success = True
         if compile_cmd:
-            rc, out = container.exec_run(cmd=['/bin/bash', '-lc', compile_cmd], workdir='/workspace')
+            rc, out = container.exec_run(cmd=['/bin/bash', '-lc', compile_cmd], workdir='/tmp/run')
             compile_output = _read_output(out)
             compile_success = (rc == 0)
 
@@ -60,17 +77,17 @@ def run_submission(
         if compile_success:
             for idx, input_fn in enumerate(input_files):
                 input_container_path = f'/workspace/{os.path.basename(input_fn)}'
-                # build an isolated run that records time and memory using GNU time
                 safe_run = run_cmd
+                # run inside tmpfs and redirect outputs to files there
                 cmd = (
                     "/bin/bash -lc "
                     + shlex.quote(
-                        f"/usr/bin/time -f 'TIME:%e\nMEM:%M' timeout {timeout_seconds}s sh -c '{safe_run} < {input_container_path}' 1>prog_out.txt 2>prog_time.txt; echo '---PROG---'; cat prog_out.txt; echo '---TIME---'; cat prog_time.txt"
+                        f"/usr/bin/time -f 'TIME:%e\nMEM:%M' timeout {timeout_seconds}s sh -c 'cd /tmp/run && {safe_run} < {input_container_path} 1>prog_out.txt 2>prog_time.txt; echo \"---PROG---\"; cat prog_out.txt; echo \"---TIME---\"; cat prog_time.txt'"
                     )
                 )
-                rc, out = container.exec_run(cmd=cmd, workdir='/workspace')
+                rc, out = container.exec_run(cmd=cmd, workdir='/tmp/run')
                 text = _read_output(out)
-                # Split sections
+
                 stdout = ''
                 time_str = ''
                 mem_str = ''
@@ -88,7 +105,6 @@ def run_submission(
                 else:
                     stdout = text.strip()
 
-                # Read expected output from helper (executor will pass expected)
                 tests.append({
                     'stdout': stdout,
                     'time_seconds': float(time_str) if time_str else None,
@@ -101,6 +117,9 @@ def run_submission(
             'compile_output': compile_output,
             'tests': tests,
         }
+
+    except DockerException as e:
+        raise DockerUnavailableError(str(e))
 
     finally:
         try:

@@ -2,6 +2,7 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from .schemas import ExecutionRequest, ExecutionResult
 from .executor import execute
+from . import docker_runner
 
 app = FastAPI(title='Secure Code Runner')
 
@@ -13,5 +14,7 @@ async def run_code(req: ExecutionRequest):
         return JSONResponse(status_code=200, content=res)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
-    except Exception as e:
+    except docker_runner.DockerUnavailableError as e:
+        raise HTTPException(status_code=503, detail=f'docker unavailable: {e}')
+    except Exception:
         raise HTTPException(status_code=500, detail='execution error')
