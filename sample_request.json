@@ -1,0 +1,8 @@
+{
+  "code": "print(input())",
+  "language": "python",
+  "tests": [
+    {"input": "hello", "expected_output": "hello"},
+    {"input": "world", "expected_output": "world"}
+  ]
+}

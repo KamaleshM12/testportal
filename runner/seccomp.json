@@ -1,0 +1,18 @@
+{
+  "defaultAction": "SCMP_ACT_ERRNO",
+  "archMap": [],
+  "syscalls": [
+    {
+      "names": [
+        "read","write","exit","futex","mmap","mprotect","brk","arch_prctl",
+        "set_tid_address","rt_sigaction","rt_sigprocmask","clone","execve",
+        "openat","close","lseek","access","fstat","fstatat","lstat","uname",
+        "mremap","poll","getrandom","clock_gettime","nanosleep","getcwd",
+        "stat","fstat","lstat","ioctl","readlinkat","newfstatat","prlimit64"
+      ],
+      "action": "SCMP_ACT_ALLOW",
+      "args": [],
+      "comment": "Allow basic syscalls needed for running compiled programs"
+    }
+  ]
+}

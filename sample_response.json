@@ -1,0 +1,8 @@
+{
+  "compile_success": true,
+  "compile_output": "",
+  "tests": [
+    {"stdout": "hello", "stderr": null, "time_seconds": 0.01, "memory_kb": 5120, "passed": true},
+    {"stdout": "world", "stderr": null, "time_seconds": 0.01, "memory_kb": 5120, "passed": true}
+  ]
+}
